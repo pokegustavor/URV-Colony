@@ -21,7 +21,8 @@ namespace URV_Colony
                 return new string[]
                 {
                     "urv",
-                    "sub"
+                    "sub",
+                    "umbra"
                 };
             }
 
