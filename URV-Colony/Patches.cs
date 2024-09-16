@@ -95,10 +95,7 @@ namespace URV_Colony
         {
             static void Postfix()
             {
-                if (PLServer.GetCurrentSector().VisualIndication != ESectorVisualIndication.ABYSS)
-                {
-                    Assembler.Assemble();
-                }
+                Assembler.Assemble();
             }
         }
 

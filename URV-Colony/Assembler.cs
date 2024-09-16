@@ -84,6 +84,12 @@ namespace URV_Colony
                 return;
             }
 
+            while (!PLLoader.Instance.IsLoaded || PLServer.GetCurrentSector() == null) 
+            {
+                await Task.Yield();
+            }
+            if (PLServer.GetCurrentSector().VisualIndication == ESectorVisualIndication.ABYSS) return;
+
             //Cargo pads
             PLShipInfo ship = PLAbyssShipInfo.Instance;
             ship.MyStats.SetSlotLimit(ESlotType.E_COMP_CARGO, 9);
