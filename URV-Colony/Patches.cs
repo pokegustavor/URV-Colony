@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System;
 using UnityEngine;
+using System.Threading.Tasks;
+using static PLBurrowArena;
 
 namespace URV_Colony
 {
@@ -100,31 +102,30 @@ namespace URV_Colony
         }
 
         [HarmonyPatch(typeof(PLShipStats), "CalculateStats")]
-        class ApplyEMP 
+        class ApplyEMP
         {
-            static void Postfix(PLShipStats __instance) 
+            static void Postfix(PLShipStats __instance)
             {
-                if(PLAbyssShipInfo.Instance != null && __instance.Ship != PLAbyssShipInfo.Instance) 
+                if (PLAbyssShipInfo.Instance != null && __instance.Ship != PLAbyssShipInfo.Instance)
                 {
                     PLAbyssShipInfo.UpdateShipStatsBasedOnEMP(__instance);
                 }
             }
         }
 
-
-        [HarmonyPatch(typeof(PLInGameUI),"Update")]
-        class ShowMoney 
+        [HarmonyPatch(typeof(PLInGameUI), "Update")]
+        class ShowMoney
         {
-            static void Prefix(PLInGameUI __instance,ref int __state) 
+            static void Prefix(PLInGameUI __instance, ref int __state)
             {
                 if (PLServer.Instance != null)
                 {
                     __state = __instance.CachedCredits;
                 }
             }
-            static void Postfix(PLInGameUI __instance, int __state) 
+            static void Postfix(PLInGameUI __instance, int __state)
             {
-                if (PLAbyssShipInfo.Instance != null && PLServer.GetCurrentSector() != null && PLServer.GetCurrentSector().VisualIndication != ESectorVisualIndication.ABYSS) 
+                if (PLAbyssShipInfo.Instance != null && PLServer.GetCurrentSector() != null && PLServer.GetCurrentSector().VisualIndication != ESectorVisualIndication.ABYSS)
                 {
                     __instance.CachedCredits = __state;
                     if (Time.time - __instance.LastCachedCreditsUpdateTime > 1f && __instance.CachedCredits != PLServer.Instance.CurrentCrewCredits)
@@ -231,6 +232,99 @@ namespace URV_Colony
                     {
                         __instance.CreditsScrolling.enabled = false;
                     }
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(PLServer), "Start")]
+        class FixGalaxyPathing
+        {
+            static void Postfix(PLServer __instance)
+            {
+                CreatePathing(__instance);
+            }
+
+
+            static async void CreatePathing(PLServer __instance)
+            {
+                float cachedNeighborDist = 0f;
+                int cachedGalaxySeed = -1;
+                int cachedSectorCount = 0;
+                List<PLSectorInfo> cachedSectors = new List<PLSectorInfo>();
+                while (Application.isPlaying)
+                {
+                    try 
+                    {
+                        if (__instance == null) break;
+                    }
+                    catch 
+                    {
+                        break;
+                    }
+                    if (PLAbyssShipInfo.Instance == null || PLServer.GetCurrentSector() == null)
+                    {
+                        await Task.Delay(200);
+                        if (PLServer.GetCurrentSector().VisualIndication == ESectorVisualIndication.ABYSS) break;
+                        continue;
+                    }
+                    if (PLGlobal.Instance != null && PLGlobal.Instance.Galaxy != null && PLGlobal.Instance.Galaxy.IsFullySetup && PLServer.Instance != null)
+                    {
+                        PLShipInfo plshipInfo = PLEncounterManager.Instance.PlayerShip;
+                        if (PLAcademyShipInfo.Instance != null)
+                        {
+                            plshipInfo = PLAcademyShipInfo.Instance;
+                        }
+                        if (plshipInfo != null)
+                        {
+                            float neighborDistance = Mathf.Max(plshipInfo.MyStats.WarpRange, __instance.GetCurrentHunterWarpRange()) * 1.1f;
+                            if (neighborDistance != cachedNeighborDist || cachedGalaxySeed != PLGlobal.Instance.Galaxy.Seed || cachedSectorCount != PLGlobal.Instance.Galaxy.AllSectorInfos.Count)
+                            {
+                                __instance.GalaxyPathing_InProgress = true;
+                                cachedNeighborDist = neighborDistance;
+                                cachedSectorCount = PLGlobal.Instance.Galaxy.AllSectorInfos.Count;
+                                cachedGalaxySeed = PLGlobal.Instance.Galaxy.Seed;
+                                cachedSectors.Clear();
+                                cachedSectors.AddRange(PLGlobal.Instance.Galaxy.AllSectorInfos.Values);
+                                cachedSectors.Sort(new Comparison<PLSectorInfo>(__instance.SortSectorByID));
+                                await Task.Yield();
+                                int numThisFrame = 0;
+                                foreach (PLSectorInfo plsectorInfo in cachedSectors)
+                                {
+                                    if (plsectorInfo != null && plsectorInfo.GridCell == null)
+                                    {
+                                        PLGlobal.Instance.Galaxy.GetGridCellForSector(plsectorInfo, true);
+                                    }
+                                    int num = numThisFrame;
+                                    numThisFrame = num + 1;
+                                    int num2 = (PLStarmap.Instance != null && PLStarmap.Instance.IsActive) ? 400 : 100;
+                                    if (numThisFrame > num2)
+                                    {
+                                        numThisFrame = 0;
+                                        await Task.Yield();
+                                    }
+                                }
+                                List<PLSectorInfo>.Enumerator enumerator = default(List<PLSectorInfo>.Enumerator);
+                                foreach (PLSectorInfo plsectorInfo2 in cachedSectors)
+                                {
+                                    if (plsectorInfo2 != null)
+                                    {
+                                        plsectorInfo2.Neighbors = PLGlobal.Instance.Galaxy.GridSearch_FindSectorsWithinRange(plsectorInfo2.Position, neighborDistance * neighborDistance, plsectorInfo2);
+                                    }
+                                    int num = numThisFrame;
+                                    numThisFrame = num + 1;
+                                    int num3 = (PLStarmap.Instance != null && PLStarmap.Instance.IsActive) ? 16 : 4;
+                                    if (numThisFrame > num3)
+                                    {
+                                        numThisFrame = 0;
+                                        await Task.Yield();
+                                    }
+                                }
+                                enumerator = default(List<PLSectorInfo>.Enumerator);
+                                __instance.GalaxyPathing_InProgress = false;
+                            }
+                        }
+                    }
+                    await Task.Delay(200);
                 }
             }
         }

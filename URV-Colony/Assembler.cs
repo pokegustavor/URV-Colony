@@ -9,6 +9,7 @@ using PulsarModLoader.Utilities;
 using UnityEngine;
 using static UIPopupList;
 using ExitGames.Demos.DemoAnimator;
+using UnityEngine.UI;
 
 namespace URV_Colony
 {
@@ -52,7 +53,10 @@ namespace URV_Colony
             if (newShip)
             {
                 PLShipInfo prevShip = PLEncounterManager.Instance.PlayerShip;
-                PLPersistantShipInfo plpersistantShipInfo = new PLPersistantShipInfo(EShipType.E_ABYSS_PLAYERSHIP, 0, PLServer.GetCurrentSector(), 0, false, false, true, -1, -1);
+                PLPersistantShipInfo plpersistantShipInfo = new PLPersistantShipInfo(EShipType.E_ABYSS_PLAYERSHIP, 0, PLServer.GetCurrentSector(), 0, false, false, true, -1, -1)
+                {
+                    ShipName = prevShip.ShipName
+                };
                 PLServer.Instance.AllPSIs.Add(plpersistantShipInfo);
                 PLShipInfoBase shipS = PLEncounterManager.Instance.GetCPEI().SpawnEnemyShip(plpersistantShipInfo.Type, plpersistantShipInfo, PLEncounterManager.Instance.PlayerShip.Exterior.transform.position + new Vector3(0, 200, 0), default);
                 await Task.Delay(500);
@@ -203,10 +207,356 @@ namespace URV_Colony
             GameObject Replacement2 = ship.InteriorDynamic.transform.Find("ClonedScreen_Status 1 (2)").gameObject;
             Replacement2.GetComponent<PLClonedScreen>().MyTargetScreen = WarpScreen;
 
+            //CommsScreen
+            GameObject CommScreenObj = Object.Instantiate(Intrepid.transform.Find("IntreiorDynamic").Find("CommsScreen").gameObject, ship.InteriorDynamic.transform);
+            CommScreenObj.transform.localPosition = new Vector3(-4.64f, - 1.658f, 27.4018f);
+            CommScreenObj.transform.localEulerAngles = new Vector3(0, 121.4545f, 0);
+            Object.DestroyImmediate(CommScreenObj.GetComponent<Light>());
+            PLCommsScreen CommScreen = CommScreenObj.GetComponent<PLCommsScreen>();
+            CommScreen.MyScreenHubBase = ship.MyScreenBase;
+            CommScreen.MyRootPanel = null;
+            CommScreen.Start();
+            CommScreen.SetupUI();
+            CommScreen.ScreenID = 8;
+            GameObject CommTextObj = Object.Instantiate(Intrepid.transform.Find("InteriorStatic").Find("DialogueWorldRoot_Text").gameObject, ship.InteriorStatic.transform);
+            ship.DialogueWorldRoot_Text = CommTextObj.transform;
+            ship.DialogueWorldRoot_Choices = Object.Instantiate(Intrepid.transform.Find("InteriorStatic").Find("DialogueWorldRoot_Choices").gameObject, ship.InteriorStatic.transform).transform;
+            Comms(ship);
+            ship.DialogueTextBG.transform.localPosition = new Vector3(-125.0904f, -60.8948f, 1410.355f);
+            ship.DialogueChoiceBGObj.transform.localPosition = new Vector3(-66.1816f, -60.8948f, 1312.09f);
 
-            PLAbyssShipInfo.Instance = null;
-            await Task.Yield();
-            PLAbyssShipInfo.Instance = ship as PLAbyssShipInfo;
+            //Atomizer
+            GameObject atomizerObj = Object.Instantiate(Intrepid.transform.Find("IntreiorDynamic").Find("Research_Atomizer_Frame_01").gameObject, ship.InteriorDynamic.transform);
+            ship.ResearchLockerAnimator = atomizerObj.transform.GetComponentInChildren<Animation>();
+            ship.ResearchLockerFrame = atomizerObj.transform.GetComponent<MeshRenderer>();
+            ship.ResearchLockerCollider = Object.Instantiate(Intrepid.transform.Find("IntreiorDynamic").Find("ResearchLockerCollider").gameObject, ship.InteriorDynamic.transform).transform.GetComponent<BoxCollider>();
+            ship.ResearchLockerWorldRoot = Object.Instantiate(Intrepid.transform.Find("IntreiorDynamic").Find("ResearchLockerWorldUI").gameObject, ship.InteriorDynamic.transform).transform;
+            ship.ResearchLockerCollider.transform.SetParent(atomizerObj.transform);
+            ship.ResearchLockerWorldRoot.transform.SetParent(atomizerObj.transform);
+            atomizerObj.transform.localPosition = new Vector3(13.1418f, -2.3236f, -11.32f);
+            atomizerObj.transform.localEulerAngles = new Vector3(0, 160.1154f, 0);
+            Atomizer(ship);
+            ship.ResearchLockerWorldRootBGObj.transform.localPosition = new Vector3(667.75f, -80.7892f, -560);
+            ship.ResearchLockerWorldRootBGObj.transform.localEulerAngles = new Vector3(0, 158.5544f, 0);
+        }
+
+        static void Comms(PLShipInfo ship) 
+        {
+
+            GameObject gameObject = ship.InteriorStatic.transform.Find("ShipWorldUICanvas").gameObject;
+            GameObject gameObject2 = new GameObject("DialogueBG", new System.Type[]
+            {
+                typeof(Image)
+            });
+            gameObject2.transform.SetParent(gameObject.transform);
+            gameObject2.transform.localPosition = new Vector3(-125.0904f, - 60.8948f, 1410.355f);
+            gameObject2.transform.localEulerAngles = new Vector3(0, 16.7273f, 0);
+            gameObject2.transform.localScale = new Vector3(0.18f,0.18f,1);
+            gameObject2.layer = 3;
+            ship.DialogueTextBG = gameObject2.GetComponent<Image>();
+            ship.DialogueTextBG.sprite = PLGlobal.Instance.TabFillSprite;
+            ship.DialogueTextBG.type = Image.Type.Sliced;
+            ship.DialogueTextBG.color = new Color(0.5f, 0.5f, 1f, 0.1f);
+            ship.DialogueTextBG.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 600f);
+            ship.DialogueTextBG.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 350f);
+            ship.DialogueTextBG.raycastTarget = false;
+            gameObject2.transform.localPosition = ship.DialogueWorldRoot_Text.transform.localPosition / 0.02f;
+            GameObject gameObject3 = new GameObject("CloseCommsBtnGO", new System.Type[]
+            {
+                typeof(Image),
+                typeof(Button)
+            });
+            Button component2 = gameObject3.GetComponent<Button>();
+            gameObject3.GetComponent<Image>().sprite = PLGlobal.Instance.CloseCommsSprite;
+            component2.transform.SetParent(ship.DialogueTextBG.transform);
+            component2.transform.localPosition = new Vector3(280f, 187f, 0f);
+            component2.transform.localRotation = Quaternion.identity;
+            component2.transform.localScale = Vector3.one;
+            component2.gameObject.layer = 3;
+            ColorBlock colors = component2.colors;
+            colors.normalColor = Color.gray;
+            component2.colors = colors;
+            component2.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 32f);
+            component2.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 32f);
+            component2.transform.localPosition = new Vector3(280f, 187f, 0f);
+            component2.onClick.AddListener(delegate ()
+            {
+                PLCommsScreen.SelectHailTarget(null, ship);
+            });
+            ship.DialogueChoiceBGObj = new GameObject("DialogueChoiceBG", new System.Type[]
+            {
+                typeof(Image)
+            });
+            ship.DialogueChoiceBGObj.transform.SetParent(gameObject.transform);
+            ship.DialogueChoiceBGObj.transform.localPosition = new Vector3(-66.1816f, - 60.8948f, 1312.09f);
+            ship.DialogueChoiceBGObj.transform.localEulerAngles = new Vector3(0, 90.6673f, 0);
+            ship.DialogueChoiceBGObj.transform.localScale = new Vector3(0.18f,0.18f,1);
+            ship.DialogueChoiceBGObj.layer = 3;
+            ship.DialogueChoiceBG = ship.DialogueChoiceBGObj.GetComponent<Image>();
+            ship.DialogueChoiceBG.sprite = PLGlobal.Instance.TabFillSprite;
+            ship.DialogueChoiceBG.type = Image.Type.Sliced;
+            ship.DialogueChoiceBG.color = new Color(0.5f, 0.5f, 1f, 0.1f);
+            ship.DialogueChoiceBG.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 600f);
+            ship.DialogueChoiceBG.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 340f);
+            ship.DialogueChoiceBGObj.transform.localPosition = ship.DialogueWorldRoot_Choices.transform.localPosition / 0.02f;
+            GameObject gameObject4 = new GameObject("DialogueChoiceBGTimer", new System.Type[]
+            {
+                typeof(Image)
+            });
+            gameObject4.transform.SetParent(ship.DialogueChoiceBGObj.transform);
+            gameObject4.transform.localPosition = Vector3.one;
+            gameObject4.transform.localRotation = Quaternion.identity;
+            gameObject4.transform.localScale = Vector3.one;
+            gameObject4.layer = 3;
+            ship.DialogueChoiceBG_Timer = gameObject4.GetComponent<Image>();
+            ship.DialogueChoiceBG_Timer.sprite = PLGlobal.Instance.DialogueChoiceBG_Timer;
+            ship.DialogueChoiceBG_Timer.type = Image.Type.Filled;
+            ship.DialogueChoiceBG_Timer.fillMethod = Image.FillMethod.Radial360;
+            ship.DialogueChoiceBG_Timer.fillOrigin = 3;
+            ship.DialogueChoiceBG_Timer.color = new Color(1f, 0f, 0f, 1f);
+            ship.DialogueChoiceBG_Timer.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 600f);
+            ship.DialogueChoiceBG_Timer.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 340f);
+            gameObject4.transform.localPosition = Vector3.one;
+            ship.CreateOutlineObject(ship.DialogueChoiceBG.transform, PLGlobal.Instance.OutlineSprite, new Vector3(0f, 0f, 4f), 0.3f, 340f);
+            ship.CreateOutlineObject(ship.DialogueChoiceBG.transform, PLGlobal.Instance.OutlineSprite, new Vector3(0f, 0f, -6f), 0.05f, 340f);
+            ship.CreateOutlineObject(ship.DialogueChoiceBG.transform, PLGlobal.Instance.OutlineSprite, new Vector3(0f, 0f, -12f), 0.05f, 340f);
+            ship.CreateOutlineObject(ship.DialogueChoiceBG.transform, PLGlobal.Instance.OutlineSprite, new Vector3(0f, 0f, -18f), 0.02f, 340f);
+            ship.CreateOutlineObject(ship.DialogueTextBG.transform, PLGlobal.Instance.OutlineSprite, new Vector3(0f, 0f, 4f), 0.3f, 350f);
+            ship.CreateOutlineObject(ship.DialogueTextBG.transform, PLGlobal.Instance.OutlineSprite, new Vector3(0f, 0f, -6f), 0.05f, 350f);
+            ship.CreateOutlineObject(ship.DialogueTextBG.transform, PLGlobal.Instance.OutlineSprite, new Vector3(0f, 0f, -12f), 0.05f, 350f);
+            ship.CreateOutlineObject(ship.DialogueTextBG.transform, PLGlobal.Instance.OutlineSprite, new Vector3(0f, 0f, -18f), 0.02f, 350f);
+            ship.DialogueGlitchImages = new Image[8];
+            for (int i = 0; i < 8; i++)
+            {
+                GameObject gameObject5 = new GameObject("dialogueGlitch", new System.Type[]
+                {
+                    typeof(Image)
+                });
+                Image component3 = gameObject5.GetComponent<Image>();
+                if (i < 4)
+                {
+                    gameObject5.transform.SetParent(ship.DialogueTextBG.transform);
+                }
+                else
+                {
+                    gameObject5.transform.SetParent(ship.DialogueChoiceBG.transform);
+                }
+                gameObject5.transform.localPosition = new Vector3(0f, 0f, 5f);
+                gameObject5.transform.localRotation = Quaternion.identity;
+                gameObject5.transform.localScale = Vector3.one;
+                gameObject5.layer = 3;
+                component3.sprite = PLGlobal.Instance.TabShadowSprite;
+                component3.type = Image.Type.Sliced;
+                component3.color = new Color(0.5f, 0.5f, 1f, 0.1f);
+                component3.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 600f);
+                component3.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, UnityEngine.Random.Range(70f, 190f));
+                gameObject5.transform.localPosition = new Vector3(0f, 0f, 5f);
+                component3.raycastTarget = false;
+                ship.DialogueGlitchImages[i] = component3;
+            }
+            GameObject gameObject6 = new GameObject("DialogueTitle", new System.Type[]
+            {
+                typeof(Text)
+            });
+            gameObject6.transform.SetParent(gameObject2.transform);
+            gameObject6.transform.localPosition = new Vector3(20f, 0f, 0f);
+            gameObject6.transform.localRotation = Quaternion.identity;
+            gameObject6.transform.localScale = Vector3.one;
+            gameObject6.layer = 3;
+            ship.DialogueTitle = gameObject6.GetComponent<Text>();
+            ship.DialogueTitle.font = PLGlobal.Instance.MainFont;
+            ship.DialogueTitle.alignment = TextAnchor.UpperLeft;
+            ship.DialogueTitle.resizeTextForBestFit = true;
+            ship.DialogueTitle.resizeTextMaxSize = 28;
+            ship.DialogueTitle.color = Color.white * 0.75f;
+            ship.DialogueTitle.raycastTarget = false;
+            ship.DialogueTitle.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 620f);
+            ship.DialogueTitle.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 410f);
+            gameObject6.transform.localPosition = new Vector3(20f, 0f, 0f);
+            ship.DialogueTitle.text = "";
+            GameObject gameObject7 = new GameObject("DialogueTextRight", new System.Type[]
+            {
+                typeof(Text)
+            });
+            gameObject7.transform.SetParent(gameObject2.transform);
+            gameObject7.transform.localPosition = new Vector3(0f, 0f, 0f);
+            gameObject7.transform.localRotation = Quaternion.identity;
+            gameObject7.transform.localScale = Vector3.one;
+            gameObject7.layer = 3;
+            ship.DialogueTextRight = gameObject7.GetComponent<Text>();
+            ship.DialogueTextRight.font = PLGlobal.Instance.MainFont;
+            ship.DialogueTextRight.alignment = TextAnchor.LowerRight;
+            ship.DialogueTextRight.resizeTextForBestFit = false;
+            ship.DialogueTextRight.fontSize = 14;
+            ship.DialogueTextRight.color = Color.white * 0.8f;
+            ship.DialogueTextRight.verticalOverflow = VerticalWrapMode.Overflow;
+            ship.DialogueTextRight.horizontalOverflow = HorizontalWrapMode.Overflow;
+            ship.DialogueTextRight.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 540f);
+            ship.DialogueTextRight.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 300f);
+            gameObject7.transform.localPosition = new Vector3(0f, 0f, 0f);
+            ship.DialogueTextRight.text = "";
+            GameObject gameObject8 = new GameObject("DialogueText", new System.Type[]
+            {
+                typeof(Text)
+            });
+            gameObject8.transform.SetParent(gameObject2.transform);
+            gameObject8.transform.localPosition = new Vector3(0f, 0f, 0f);
+            gameObject8.transform.localRotation = Quaternion.identity;
+            gameObject8.transform.localScale = Vector3.one;
+            gameObject8.layer = 3;
+            ship.DialogueText = gameObject8.GetComponent<Text>();
+            ship.DialogueText.font = PLGlobal.Instance.MainFont;
+            ship.DialogueText.alignment = TextAnchor.LowerLeft;
+            ship.DialogueText.resizeTextForBestFit = false;
+            ship.DialogueText.fontSize = 14;
+            ship.DialogueText.color = Color.white * 0.8f;
+            ship.DialogueText.verticalOverflow = VerticalWrapMode.Overflow;
+            ship.DialogueText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            ship.DialogueText.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 540f);
+            ship.DialogueText.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 300f);
+            gameObject8.transform.SetParent(gameObject2.transform);
+            gameObject8.transform.localPosition = new Vector3(0f, 0f, 0f);
+            ship.DialogueText.text = "";
+            GameObject gameObject9 = new GameObject("DialogueChoice_PageLabel", new System.Type[]
+            {
+                typeof(Text)
+            });
+            ship.DialogueChoice_PageLabel = gameObject9.GetComponent<Text>();
+            ship.DialogueChoice_PageLabel.font = PLGlobal.Instance.MainFont;
+            ship.DialogueChoice_PageLabel.transform.SetParent(ship.DialogueChoiceBG.transform);
+            ship.DialogueChoice_PageLabel.alignment = TextAnchor.MiddleCenter;
+            ship.DialogueChoice_PageLabel.transform.localPosition = new Vector3(0f, 110f, 0f);
+            ship.DialogueChoice_PageLabel.transform.localRotation = Quaternion.identity;
+            ship.DialogueChoice_PageLabel.transform.localScale = Vector3.one;
+            ship.DialogueChoice_PageLabel.gameObject.layer = 3;
+            ship.DialogueChoice_PageLabel.resizeTextForBestFit = true;
+            ship.DialogueChoice_PageLabel.resizeTextMinSize = 8;
+            ship.DialogueChoice_PageLabel.resizeTextMaxSize = 18;
+            ship.DialogueChoice_PageLabel.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 80f);
+            ship.DialogueChoice_PageLabel.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 25f);
+            ship.DialogueChoice_PageLabel.transform.localPosition = new Vector3(0f, 110f, 0f);
+            GameObject gameObject10 = new GameObject("DialogueChoice_Left", new System.Type[]
+            {
+                typeof(Image),
+                typeof(Button)
+            });
+            ship.DialogueChoice_Left = gameObject10.GetComponent<Button>();
+            gameObject10.GetComponent<Image>().sprite = PLGlobal.Instance.LeftArrowSprite;
+            ship.DialogueChoice_Left.transform.SetParent(ship.DialogueChoiceBG.transform);
+            ship.DialogueChoice_Left.transform.localPosition = new Vector3(-40f, 110f, 0f);
+            ship.DialogueChoice_Left.transform.localRotation = Quaternion.identity;
+            ship.DialogueChoice_Left.transform.localScale = Vector3.one;
+            ship.DialogueChoice_Left.gameObject.layer = 3;
+            ship.DialogueChoice_Left.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 32f);
+            ship.DialogueChoice_Left.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 32f);
+            ship.DialogueChoice_Left.transform.localPosition = new Vector3(-40f, 110f, 0f);
+            ship.DialogueChoice_Left.onClick.AddListener(delegate ()
+            {
+                ship.DialogueChoicePage--;
+            });
+            GameObject gameObject11 = new GameObject("DialogueChoice_Right", new System.Type[]
+            {
+                typeof(Image),
+                typeof(Button)
+            });
+            ship.DialogueChoice_Right = gameObject11.GetComponent<Button>();
+            gameObject11.GetComponent<Image>().sprite = PLGlobal.Instance.RightArrowSprite;
+            ship.DialogueChoice_Right.transform.SetParent(ship.DialogueChoiceBG.transform);
+            ship.DialogueChoice_Right.transform.localPosition = new Vector3(40f, 110f, 0f);
+            ship.DialogueChoice_Right.transform.localRotation = Quaternion.identity;
+            ship.DialogueChoice_Right.transform.localScale = Vector3.one;
+            ship.DialogueChoice_Right.gameObject.layer = 3;
+            ship.DialogueChoice_Right.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 32f);
+            ship.DialogueChoice_Right.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 32f);
+            ship.DialogueChoice_Right.transform.localPosition = new Vector3(40f, 110f, 0f);
+            ship.DialogueChoice_Right.onClick.AddListener(delegate ()
+            {
+                ship.DialogueChoicePage++;
+            });
+        }
+
+        static void Atomizer(PLShipInfo ship) 
+        {
+            ship.ResearchLockerWorldRootBGObj = new GameObject("ResearchLockerWorldRootBG", new System.Type[]
+            {
+                typeof(Image)
+            });
+            ship.ResearchLockerWorldRootBGObj.transform.SetParent(ship.worldUiCanvas.gameObject.transform);
+            ship.ResearchLockerWorldRootBGObj.transform.localPosition = ship.ResearchLockerWorldRoot.transform.localPosition / 0.02f;
+            ship.ResearchLockerWorldRootBGObj.transform.localRotation = ship.ResearchLockerWorldRoot.transform.localRotation;
+            ship.ResearchLockerWorldRootBGObj.transform.localScale = ship.ResearchLockerWorldRoot.transform.localScale * 50f;
+            ship.ResearchLockerWorldRootBGObj.layer = 3;
+            ship.ResearchLockerWorldRoot_RoomArea = ship.GetRoomAreaForTransform(ship.ResearchLockerWorldRootBGObj.transform);
+            Image component = ship.ResearchLockerWorldRootBGObj.GetComponent<Image>();
+            component.sprite = PLGlobal.Instance.TabFillSprite;
+            component.type = Image.Type.Sliced;
+            component.color = new Color(0.5f, 1f, 0.5f, 0.1f);
+            component.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 160f);
+            component.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 160f);
+            ship.ResearchLockerWorldRootBGObj.transform.localPosition = ship.ResearchLockerWorldRoot.transform.localPosition / 0.02f;
+            GameObject gameObject = new GameObject("ResearchLockerTitle", new System.Type[]
+            {
+                typeof(Text)
+            });
+            gameObject.transform.SetParent(component.transform);
+            gameObject.transform.localPosition = new Vector3(0f, 30f, 0f);
+            gameObject.transform.localRotation = Quaternion.identity;
+            gameObject.transform.localScale = Vector3.one;
+            gameObject.layer = 3;
+            Text component2 = gameObject.GetComponent<Text>();
+            component2.font = PLGlobal.Instance.MainFont;
+            component2.alignment = TextAnchor.MiddleCenter;
+            component2.resizeTextForBestFit = true;
+            component2.resizeTextMinSize = 8;
+            component2.resizeTextMaxSize = 30;
+            component2.color = Color.green;
+            component2.text = "ATOMIZER";
+            component2.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 145f);
+            component2.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 45f);
+            gameObject.transform.localPosition = new Vector3(0f, 30f, 0f);
+            GameObject gameObject2 = new GameObject("ResearchProcessLockerButton", new System.Type[]
+            {
+                typeof(Image),
+                typeof(Button)
+            });
+            gameObject2.transform.SetParent(component.transform);
+            gameObject2.transform.localPosition = new Vector3(0f, -30f, 0f);
+            gameObject2.transform.localRotation = Quaternion.identity;
+            gameObject2.transform.localScale = Vector3.one;
+            gameObject2.layer = 3;
+            ship.ProcessLockerButton = gameObject2.GetComponent<Button>();
+            Image component3 = gameObject2.GetComponent<Image>();
+            ColorBlock colors = ship.ProcessLockerButton.colors;
+            colors.normalColor = Color.green * 0.5f;
+            ship.ProcessLockerButton.colors = colors;
+            component3.sprite = PLGlobal.Instance.TabFillSprite;
+            component3.type = Image.Type.Sliced;
+            component3.color = new Color(0f, 1f, 0f, 1f);
+            component3.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 140f);
+            component3.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 50f);
+            gameObject2.transform.localPosition = new Vector3(0f, -30f, 0f);
+            GameObject gameObject3 = new GameObject("ResearchResearchButtonText", new System.Type[]
+            {
+                typeof(Text)
+            });
+            gameObject3.transform.SetParent(component3.transform);
+            gameObject3.transform.localPosition = new Vector3(0f, 0f, 0f);
+            gameObject3.transform.localRotation = Quaternion.identity;
+            gameObject3.transform.localScale = Vector3.one;
+            gameObject3.layer = 3;
+            ship.ProcessButtonText = gameObject3.GetComponent<Text>();
+            ship.ProcessButtonText.font = PLGlobal.Instance.MainFont;
+            ship.ProcessButtonText.fontSize = 13;
+            ship.ProcessButtonText.alignment = TextAnchor.MiddleCenter;
+            ship.ProcessButtonText.color = Color.black;
+            ship.ProcessButtonText.text = PLLocalize.Localize("READY", false);
+            ship.ProcessLockerButton.onClick.AddListener(delegate ()
+            {
+                ship.ClickAtomize();
+            });
+            ship.ProcessButtonText.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 140f);
+            ship.ProcessButtonText.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 50f);
+            gameObject3.transform.localPosition = new Vector3(0f, 0f, 0f);
         }
     }
 }
