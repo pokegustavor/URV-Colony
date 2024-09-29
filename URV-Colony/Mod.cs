@@ -4,7 +4,7 @@ namespace URV_Colony
 {
     public class Mod : PulsarMod
     {
-        public override string Version => "1.1";
+        public override string Version => "1.2";
 
         public override string Author => "pokegustavo";
 

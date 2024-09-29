@@ -244,7 +244,6 @@ namespace URV_Colony
                 CreatePathing(__instance);
             }
 
-
             static async void CreatePathing(PLServer __instance)
             {
                 float cachedNeighborDist = 0f;
@@ -253,18 +252,18 @@ namespace URV_Colony
                 List<PLSectorInfo> cachedSectors = new List<PLSectorInfo>();
                 while (Application.isPlaying)
                 {
-                    try 
+                    try
                     {
                         if (__instance == null) break;
                     }
-                    catch 
+                    catch
                     {
                         break;
                     }
                     if (PLAbyssShipInfo.Instance == null || PLServer.GetCurrentSector() == null)
                     {
                         await Task.Delay(200);
-                        if (PLServer.GetCurrentSector().VisualIndication == ESectorVisualIndication.ABYSS) break;
+                        if (PLServer.GetCurrentSector() != null && PLServer.GetCurrentSector().VisualIndication == ESectorVisualIndication.ABYSS) break;
                         continue;
                     }
                     if (PLGlobal.Instance != null && PLGlobal.Instance.Galaxy != null && PLGlobal.Instance.Galaxy.IsFullySetup && PLServer.Instance != null)
@@ -326,6 +325,51 @@ namespace URV_Colony
                     }
                     await Task.Delay(200);
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(PLAbyssTurret), "Tick")]
+        class AbyssTurretBuff
+        {
+            static void Prefix(PLAbyssTurret __instance)
+            {
+                if (PLServer.GetCurrentSector().VisualIndication != ESectorVisualIndication.ABYSS)
+                {
+                    __instance.projSpeed_Normal = 150f;
+                    __instance.projSpeed_Fast = 480f;
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(PLAbyssShipInfo), "SendFireProbeMsg")]
+        class ReplaceFlareWithProbe
+        {
+            static bool Prefix(PLAbyssShipInfo __instance, int inPlayerIDOwner, Vector3 fireLoc, Quaternion fireRot)
+            {
+                if (PLServer.GetCurrentSector().VisualIndication == ESectorVisualIndication.ABYSS) return true;
+                float num = 6000f;
+                float num2 = 20f;
+                float num3 = num / num2;
+                Vector3 normalized = (fireRot * Vector3.forward).normalized;
+                Vector3 vector = fireLoc + normalized * num;
+                int num4 = PLServer.Instance.GetEstimatedServerMs() + Mathf.RoundToInt(num2 * 1000f);
+                RaycastHit raycastHit;
+                if (Physics.Raycast(new Ray(fireLoc, normalized), out raycastHit, num, 1))
+                {
+                    vector = raycastHit.point;
+                    float num5 = (fireLoc - vector).magnitude / num3;
+                    num4 = PLServer.Instance.GetEstimatedServerMs() + Mathf.RoundToInt(num5 * 1000f);
+                }
+                __instance.photonView.RPC("FireProbe", PhotonTargets.All, new object[]
+                {
+                    fireLoc,
+                    fireRot,
+                    PLServer.Instance.GetEstimatedServerMs(),
+                    inPlayerIDOwner,
+                    num4,
+                    vector
+                });
+                return false;
             }
         }
     }

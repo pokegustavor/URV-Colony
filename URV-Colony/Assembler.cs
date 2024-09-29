@@ -85,7 +85,7 @@ namespace URV_Colony
                         });
                     }
                 }
-                Object.DestroyImmediate(prevShip);
+                PhotonNetwork.Destroy(prevShip.photonView);
                 return;
             }
 
@@ -94,6 +94,7 @@ namespace URV_Colony
                 await Task.Yield();
             }
             if (PLServer.GetCurrentSector().VisualIndication == ESectorVisualIndication.ABYSS) return;
+
 
             //Cargo pads
             PLShipInfo ship = PLAbyssShipInfo.Instance;
@@ -209,8 +210,8 @@ namespace URV_Colony
 
             //CommsScreen
             GameObject CommScreenObj = Object.Instantiate(Intrepid.transform.Find("IntreiorDynamic").Find("CommsScreen").gameObject, ship.InteriorDynamic.transform);
-            CommScreenObj.transform.localPosition = new Vector3(-4.64f, - 1.658f, 27.4018f);
-            CommScreenObj.transform.localEulerAngles = new Vector3(0, 121.4545f, 0);
+            CommScreenObj.transform.localPosition = new Vector3(-5.3745f, - 1.658f, 25.5945f);
+            CommScreenObj.transform.localEulerAngles = new Vector3(0, 100.6492f, 0);
             Object.DestroyImmediate(CommScreenObj.GetComponent<Light>());
             PLCommsScreen CommScreen = CommScreenObj.GetComponent<PLCommsScreen>();
             CommScreen.MyScreenHubBase = ship.MyScreenBase;
@@ -225,6 +226,23 @@ namespace URV_Colony
             ship.DialogueTextBG.transform.localPosition = new Vector3(-125.0904f, -60.8948f, 1410.355f);
             ship.DialogueChoiceBGObj.transform.localPosition = new Vector3(-66.1816f, -60.8948f, 1312.09f);
 
+            //VirusScreen
+            GameObject VirusScreenObj = Object.Instantiate(Intrepid.transform.Find("IntreiorDynamic").Find("Scientist_VirusScreen").gameObject, ship.InteriorDynamic.transform);
+            Replacement1 = ship.InteriorDynamic.transform.Find("ClonedScreen_Status 1 (1)").gameObject;
+            VirusScreenObj.transform.localPosition = Replacement1.transform.localPosition;
+            VirusScreenObj.transform.localRotation = Replacement1.transform.localRotation;
+            Object.DestroyImmediate(Replacement1);
+            Object.DestroyImmediate(VirusScreenObj.GetComponent<Light>());
+            PLScientistVirusScreen VirusScreen = VirusScreenObj.GetComponent<PLScientistVirusScreen>();
+            VirusScreen.MyScreenHubBase = ship.MyScreenBase;
+            VirusScreen.MyRootPanel = null;
+            VirusScreen.Start();
+            VirusScreen.SetupUI();
+            VirusScreen.ScreenID = 12;
+            VirusScreen.OriginalScale = 1.5f;
+            Replacement2 = ship.InteriorDynamic.transform.Find("ClonedScreen_Status 6 (2)").gameObject;
+            Replacement2.GetComponent<PLClonedScreen>().MyTargetScreen = VirusScreen;
+
             //Atomizer
             GameObject atomizerObj = Object.Instantiate(Intrepid.transform.Find("IntreiorDynamic").Find("Research_Atomizer_Frame_01").gameObject, ship.InteriorDynamic.transform);
             ship.ResearchLockerAnimator = atomizerObj.transform.GetComponentInChildren<Animation>();
@@ -238,6 +256,20 @@ namespace URV_Colony
             Atomizer(ship);
             ship.ResearchLockerWorldRootBGObj.transform.localPosition = new Vector3(667.75f, -80.7892f, -560);
             ship.ResearchLockerWorldRootBGObj.transform.localEulerAngles = new Vector3(0, 158.5544f, 0);
+
+            //CPU and jump processor
+            ship.MyStats.SetSlotLimit(ESlotType.E_COMP_CPU, 4);
+            ship.MyStats.AddShipComponent(PLShipComponent.CreateShipComponentFromHash((int)PLShipComponent.createHashFromInfo(7, 0, 0, 0, 12), null), -1, ESlotType.E_COMP_CPU);
+
+            //Turret Icons
+            for (int i = 1; i < 3; i++) 
+            {
+                PLTurret turret = ship.GetTurretAtID(i);
+                if (turret != null && turret.SubType == 19 && turret is PLAbyssTurret)
+                {
+                    turret.m_IconTexture = (Texture2D)Resources.Load("Icons/10_Weapons");
+                }
+            }
         }
 
         static void Comms(PLShipInfo ship) 
